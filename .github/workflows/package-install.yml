@@ -1,0 +1,49 @@
+name: Private installable ZIP packages
+
+on:
+  push:
+    branches: [main, testing]
+    paths:
+      - "mod/**"
+      - "tests/**"
+      - "tools/package_install.py"
+      - "docs/DEVELOPER_TESTING.md"
+      - ".github/workflows/package-install.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Check Python module syntax
+        run: python -m compileall -q mod/
+      - name: Run offline runtime and hook-ownership regressions
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Build and audit standalone install ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          FLAGS=()
+          case "$GITHUB_REF_NAME" in
+            main) FLAVOR=player ;;
+            testing) FLAVOR=developer ;;
+            release-candidate)
+              if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then exit 1; fi
+              FLAVOR=player; FLAGS+=(--private-candidate) ;;
+            *) echo "Unsupported source branch"; exit 1 ;;
+          esac
+          python tools/package_install.py --flavor "$FLAVOR" --output dist "${FLAGS[@]}"
+      - name: Store private ZIP, manifest and SHA-256
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: install-${{ github.event.repository.name }}-${{ github.sha }}
+          path: dist/*
+          retention-days: 30
+          if-no-files-found: error
