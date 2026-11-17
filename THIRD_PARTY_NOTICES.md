@@ -11,7 +11,7 @@ These are external runtime/framework dependencies, not third-party mod code copi
 
 ## Other mod authors
 
-No third-party mod source or specific other-mod research contribution was identified in the reviewed No Warp Tunnel source that warrants a separate mod-author credit. A final provenance review remains necessary before public distribution.
+The release snapshot's runtime imports and documented dependencies were reviewed for third-party attribution. No specific third-party mod source requiring an additional credit was identified. This bounded check does not establish exhaustive code-origin provenance; report any omitted attribution through the issue tracker.
 
 ## AI-assisted development
 
