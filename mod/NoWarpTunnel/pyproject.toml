@@ -1,6 +1,6 @@
 [project]
 name = "no_warp_tunnel"
-version = "0.4.2"
+version = "1.0.0"
 authors = [{ name = "Peyton Blakeslee" }]
 description = "Targets the local Loader warp tunnel in BL2; experimental TPS support is not yet tested."
 

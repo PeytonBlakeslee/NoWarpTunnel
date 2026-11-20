@@ -205,5 +205,64 @@ class HookOwnershipTests(unittest.TestCase):
         self.assertEqual(dest.ExitPointsCounter, 5)
 
 
+
+    def test_actor_hook_rejects_same_class_with_wrong_loader_path(self):
+        self.m.mod.enable()
+        actor = SimpleNamespace(
+            Class=SimpleNamespace(Name="HoldingAreaDestination"),
+            ExitPointsCounter=7,
+            _path_name=lambda: "OtherMap.TheWorld:PersistentLevel.HoldingAreaDestination_1",
+        )
+        self.registered[self.key](actor, None, None, None)
+        self.assertEqual(actor.ExitPointsCounter, 7)
+
+    def test_loading_complete_repairs_resolved_loader_target(self):
+        target = SimpleNamespace(ExitPointsCounter=3)
+        lookups = []
+        def find_target(kind, path):
+            lookups.append((kind, path))
+            return target
+        self.m.unrealsdk.find_object = find_target
+        self.m.mod.enable()
+        self.assertEqual(target.ExitPointsCounter, self.m.TARGET_VALUE)
+        target.ExitPointsCounter = 4
+        self.m._loaded(None, None, None, None)
+        self.assertEqual(target.ExitPointsCounter, self.m.TARGET_VALUE)
+        self.assertEqual(lookups, [
+            ("HoldingAreaDestination", self.m.TARGET_PATH),
+            ("HoldingAreaDestination", self.m.TARGET_PATH),
+        ])
+
+    def test_missing_or_unresolvable_loader_target_is_safe(self):
+        self.m.unrealsdk.find_object = lambda *args: None
+        self.m.mod.enable()
+        self.assertTrue(self.m.mod.is_enabled)
+        self.assertFalse(self.m._repair("loading complete"))
+        def missing(*args):
+            raise RuntimeError("object unavailable during map travel")
+        self.m.unrealsdk.find_object = missing
+        self.assertFalse(self.m._repair("loading complete"))
+        self.assertTrue(self.m.mod.is_enabled)
+
+    def test_loader_target_idempotence_and_unwritable_field(self):
+        class Counter:
+            writes = 0
+            value = -99
+            @property
+            def ExitPointsCounter(self):
+                return self.value
+            @ExitPointsCounter.setter
+            def ExitPointsCounter(self, value):
+                self.writes += 1
+                raise AttributeError("counter is read-only")
+        target = Counter()
+        self.assertTrue(self.m._repair_target(target, "already repaired"))
+        self.assertEqual(target.writes, 0)
+        target.value = 5
+        self.assertFalse(self.m._repair_target(target, "write fails"))
+        self.assertEqual(target.writes, 1)
+        self.assertEqual(target.value, 5)
+
+
 if __name__ == "__main__":
     unittest.main()

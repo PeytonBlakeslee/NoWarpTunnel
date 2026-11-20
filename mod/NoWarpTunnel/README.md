@@ -1,4 +1,4 @@
-# No Warp Tunnel v0.4.2
+# No Warp Tunnel v1.0.0
 
 Skips the warp-tunnel presentation during Borderlands 2 travel. It does not change destinations or save files and has no extra options.
 
